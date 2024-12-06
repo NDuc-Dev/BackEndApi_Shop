@@ -5,6 +5,7 @@ namespace Shared.Models
 {
     public class Color
     {
+        #nullable disable
         [Key]
         public int ColorId { get; set; }
         [Required(ErrorMessage = "Color name is required")]

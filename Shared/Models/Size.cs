@@ -5,6 +5,7 @@ namespace Shared.Models
 {
     public class Size
     {
+        #nullable disable
         [Key]
         public int SizeId { get; set; }
         [Required(ErrorMessage = "Size value is required")]

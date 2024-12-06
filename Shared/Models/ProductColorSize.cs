@@ -5,6 +5,7 @@ namespace Shared.Models
 {
     public class ProductColorSize
     {
+        #nullable disable
         [Key]
         public int ProductColorSizeId { get; set; }
         public int ProductColorId { get; set; }

@@ -6,6 +6,7 @@ namespace Shared.Models
 {
     public class Brand
     {
+        #nullable disable
         [Key]
         public int BrandId { get; set; }
         [Required(ErrorMessage = "Brand name is required")]

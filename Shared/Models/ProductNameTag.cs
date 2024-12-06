@@ -5,6 +5,7 @@ namespace Shared.Models
 {
     public class ProductNameTag
     {
+        #nullable disable
         [Key]
         public int Id { get; set; }
         public int ProductId { get; set; }

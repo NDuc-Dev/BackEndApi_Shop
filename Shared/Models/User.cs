@@ -7,6 +7,8 @@ namespace Shared.Models
 {
     public class User : IdentityUser
     {
+#nullable disable
+
         [Required(ErrorMessage = "Full name is require")]
         public string FullName { get; set; }
         public string ImagePath { get; set; } = string.Empty;

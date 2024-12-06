@@ -1,10 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-
 namespace Shared.Models
 {
     public class Product
     {
+        #nullable disable
         [Key]
         public int ProductId { get; set; }
         [Required(ErrorMessage = "Product Name is required")]

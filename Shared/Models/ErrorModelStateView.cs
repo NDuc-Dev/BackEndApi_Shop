@@ -2,6 +2,7 @@
 
 namespace Shared.Models
 {
+    #nullable disable
     public class ErrorModelStateView
     {
         public string Code { get; set; }

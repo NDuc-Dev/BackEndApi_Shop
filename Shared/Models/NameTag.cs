@@ -5,6 +5,7 @@ namespace Shared.Models
 {
     public class NameTag
     {
+        #nullable disable
         [Key]
         public int NameTagId { get; set; }
         [Required(ErrorMessage = "Tag name is required")]

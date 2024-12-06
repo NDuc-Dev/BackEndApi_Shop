@@ -6,6 +6,7 @@ namespace Shared.Models
 {
     public class Order
     {
+        #nullable disable
         [Key]
         public int OrderId { get; set; }
         public string OrderBy { get; set; }
