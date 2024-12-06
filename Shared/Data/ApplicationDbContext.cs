@@ -16,16 +16,16 @@ namespace Shared.Data
         {
 
         }
-        public DbSet<Product> Products { get; set; }
-        public DbSet<Brand> Brands { get; set; }
-        public DbSet<Size> Sizes { get; set; }
-        public DbSet<Color> Colors { get; set; }
-        public DbSet<Order> Orders { get; set; }
-        public DbSet<NameTag> NameTags { get; set; }
-        public DbSet<ProductNameTag> ProductNameTags { get; set; }
-        public DbSet<OrderDetails> OrderDetails { get; set; }
-        public DbSet<ProductColor> ProductColors { get; set; }
-        public DbSet<ProductColorSize> ProductColorSizes { get; set; }
+        public DbSet<Product> Products { get; set; } = null!;
+        public DbSet<Brand> Brands { get; set; } = null!;
+        public DbSet<Size> Sizes { get; set; } = null!;
+        public DbSet<Color> Colors { get; set; } = null!;
+        public DbSet<Order> Orders { get; set; } = null!;
+        public DbSet<NameTag> NameTags { get; set; } = null!;
+        public DbSet<ProductNameTag> ProductNameTags { get; set; } = null!;
+        public DbSet<OrderDetails> OrderDetails { get; set; } = null!;
+        public DbSet<ProductColor> ProductColors { get; set; } = null!;
+        public DbSet<ProductColorSize> ProductColorSizes { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -101,7 +101,7 @@ namespace Shared.Data
 
             base.OnModelCreating(builder);
             SeedRole(builder);
-            SeedSize(builder);
+            // SeedSize(builder);
         }
 
         private void SeedRole(ModelBuilder builder)
@@ -113,20 +113,20 @@ namespace Shared.Data
                 new IdentityRole() { Name = "Customer", ConcurrencyStamp = "3", NormalizedName = "Customer" }
                 );
         }
-        private void SeedSize(ModelBuilder builder)
-        {
-            builder.Entity<Size>().HasData(
-                new Size() { SizeId = 1, SizeValue = 36 },
-                new Size() { SizeId = 2, SizeValue = 37 },
-                new Size() { SizeId = 3, SizeValue = 38 },
-                new Size() { SizeId = 4, SizeValue = 39 },
-                new Size() { SizeId = 5, SizeValue = 40 },
-                new Size() { SizeId = 6, SizeValue = 41 },
-                new Size() { SizeId = 7, SizeValue = 42 },
-                new Size() { SizeId = 8, SizeValue = 43 },
-                new Size() { SizeId = 9, SizeValue = 44 },
-                new Size() { SizeId = 10, SizeValue = 45 }
-                );
-        }
+        // private void SeedSize(ModelBuilder builder)
+        // {
+        //     builder.Entity<Size>().HasData(
+        //         new Size() { SizeId = 1, SizeValue = 36 },
+        //         new Size() { SizeId = 2, SizeValue = 37 },
+        //         new Size() { SizeId = 3, SizeValue = 38 },
+        //         new Size() { SizeId = 4, SizeValue = 39 },
+        //         new Size() { SizeId = 5, SizeValue = 40 },
+        //         new Size() { SizeId = 6, SizeValue = 41 },
+        //         new Size() { SizeId = 7, SizeValue = 42 },
+        //         new Size() { SizeId = 8, SizeValue = 43 },
+        //         new Size() { SizeId = 9, SizeValue = 44 },
+        //         new Size() { SizeId = 10, SizeValue = 45 }
+        //         );
+        // }
     }
 }
