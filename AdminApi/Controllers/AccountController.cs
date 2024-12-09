@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using AdminApi.DTOs.Email;
 using AdminApi.DTOs.User;
+using AdminApi.Interfaces;
 using AdminApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -16,15 +17,15 @@ namespace AdminApi.Controllers
     [ApiController]
     public class AccountController : ControllerBase
     {
-        private readonly JwtServices _jwtService;
+        private readonly IJwtServices _jwtService;
         private readonly SignInManager<User> _signManager;
         private readonly UserManager<User> _userManager;
-        private readonly EmailService _emailService;
+        private readonly IEmailServices _emailService;
         private IConfiguration _config;
-        public AccountController(JwtServices jwtService,
+        public AccountController(IJwtServices jwtService,
             SignInManager<User> signInManager,
             UserManager<User> userManager,
-            EmailService emailService,
+            IEmailServices emailService,
             IConfiguration config)
         {
             _jwtService = jwtService;
