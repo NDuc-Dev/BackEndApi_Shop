@@ -1,4 +1,5 @@
 using AdminApi.DTOs;
+using AdminApi.DTOs.Brand;
 using AdminApi.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Shared.Data;
@@ -14,7 +15,7 @@ namespace AdminApi.Services
             _context = context;
         }
 
-        public async Task<Brand> CreateBrandAsync(CreateBrandDTO model, User user, string filePath)
+        public async Task<Brand> CreateBrandAsync(CreateBrandDto model, User user, string filePath)
         {
             var brand = new Brand
             {

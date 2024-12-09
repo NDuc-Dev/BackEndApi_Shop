@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Identity;
 using Shared.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Text;
+using AdminApi.Interfaces;
+using AdminApi.Services;
 namespace AdminApi
 {
     public class Program
@@ -85,6 +87,15 @@ namespace AdminApi
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
             });
 
+            builder.Services.AddAutoMapper(typeof(MappingProfile));
+
+            builder.Services.AddScoped<JwtServices>();
+            builder.Services.AddScoped<EmailService>();
+            builder.Services.AddScoped<UserServices>();
+            builder.Services.AddScoped<IImageServices, ImageServices>();
+            builder.Services.AddScoped<IAuditLogServices, AuditLogService>();
+            builder.Services.AddScoped<IBrandServices, BrandServices>();
+
             builder.Services.AddIdentityCore<User>(options =>
             {
                 options.SignIn.RequireConfirmedEmail = true;
@@ -106,6 +117,8 @@ namespace AdminApi
                     ValidateAudience = false
                 };
             });
+
+
 
             builder.Services.AddCors();
 
