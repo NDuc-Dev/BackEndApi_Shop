@@ -89,12 +89,15 @@ namespace AdminApi
 
             builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-            builder.Services.AddScoped<JwtServices>();
-            builder.Services.AddScoped<EmailService>();
+            builder.Services.AddScoped<IJwtServices, JwtServices>();
+            builder.Services.AddScoped<IEmailServices, EmailServices>();
             builder.Services.AddScoped<UserServices>();
             builder.Services.AddScoped<IImageServices, ImageServices>();
             builder.Services.AddScoped<IAuditLogServices, AuditLogService>();
             builder.Services.AddScoped<IBrandServices, BrandServices>();
+            builder.Services.AddScoped<IColorServices, ColorServices>();
+            builder.Services.AddScoped<INameTagServices, NameTagServices>();
+            builder.Services.AddScoped<ISizeServices, SizeServices>();
 
             builder.Services.AddIdentityCore<User>(options =>
             {
