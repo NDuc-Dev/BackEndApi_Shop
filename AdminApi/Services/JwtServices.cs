@@ -8,7 +8,7 @@ using Shared.Models;
 
 namespace AdminApi.Services
 {
-    public class JwtServices
+    public class JwtServices : IJwtServices
     {
         private readonly IConfiguration _config;
         private SymmetricSecurityKey _jwtKey;

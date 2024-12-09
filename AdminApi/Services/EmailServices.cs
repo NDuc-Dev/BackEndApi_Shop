@@ -1,13 +1,14 @@
 using AdminApi.DTOs.Email;
+using AdminApi.Interfaces;
 using Mailjet.Client;
 using Mailjet.Client.TransactionalEmails;
 
 namespace AdminApi.Services
 {
-    public class EmailService
+    public class EmailServices : IEmailServices
     {
         private readonly IConfiguration _config;
-        public EmailService(IConfiguration config)
+        public EmailServices(IConfiguration config)
         {
             _config = config;
         }

@@ -4,7 +4,7 @@ using AdminApi.Interfaces;
 
 namespace AdminApi.Services
 {
-    public class ImageServices :IImageServices
+    public class ImageServices : IImageServices
     {
         public string CreatePathForBase64Img(string pathFor, string imagebase64)
         {

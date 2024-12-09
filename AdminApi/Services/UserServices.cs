@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using AdminApi.DTOs.Email;
+using AdminApi.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
@@ -11,16 +12,15 @@ using Shared.Models;
 
 namespace AdminApi.Services
 {
-    
     public class UserServices
     {
         private readonly IConfiguration _config;
         private readonly ApplicationDbContext _context;
         private readonly UserManager<User> _userManager;
-        private readonly EmailService _emailServices;
+        private readonly IEmailServices _emailServices;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public UserServices(IConfiguration config, ApplicationDbContext context, UserManager<User> userManager, EmailService emailService, IHttpContextAccessor httpContextAccessor)
+        public UserServices(IConfiguration config, ApplicationDbContext context, UserManager<User> userManager, IEmailServices emailService, IHttpContextAccessor httpContextAccessor)
         {
             _config = config;
             _context = context;
@@ -29,15 +29,11 @@ namespace AdminApi.Services
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public async Task<User?> GetCurrentUserAsync()
+        public Task<User?> GetCurrentUserAsync()
         {
             var user = _httpContextAccessor.HttpContext?.User;
-            if (user == null || !user.Identity.IsAuthenticated)
-            {
-                return null;
-            }
-            var userId = user.Claims.FirstOrDefault(u => u.Type == ClaimTypes.NameIdentifier)?.Value;
-            return await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            var userId = user?.Claims.FirstOrDefault(u => u.Type == ClaimTypes.NameIdentifier)?.Value;
+            return _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
         }
         public async Task<User?> GetUserInfoFromJwtAsync(string authorizationHeader)
         {
