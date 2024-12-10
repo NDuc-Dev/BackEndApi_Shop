@@ -10,7 +10,7 @@ using WebIdentityApi.Extensions;
 
 namespace AdminApi.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/manage/[controller]")]
     [ApiController]
     public class BrandController : ControllerBase
     {
