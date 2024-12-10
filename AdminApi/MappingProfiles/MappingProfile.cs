@@ -1,5 +1,7 @@
 using System.Linq;
 using AdminApi.DTOs.Brand;
+using AdminApi.DTOs.Color;
+using AdminApi.DTOs.Product;
 using AutoMapper;
 using Shared.Data;
 using Shared.Models;
@@ -58,10 +60,10 @@ public class MappingProfile : Profile
         //     .ForMember(dest => dest.Tag, opt => opt.MapFrom(src => src.NameTags.Select(t => t.NameTag)))
         //     .ForMember(dest => dest.ImagePath, opt => opt.MapFrom(src => src.ProductColor.Select(pc => pc.ImagePath.Split(';', System.StringSplitOptions.RemoveEmptyEntries).First()).First()));
 
-        // CreateMap<CreateProductDto, Product>()
-        //     .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.ProductName))
-        //     .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.ProductDescription))
-        //     .ForMember(dest => dest.Brand, opt => opt.Ignore());
+        CreateMap<CreateProductDto, Product>()
+            .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.ProductName))
+            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.ProductDescription))
+            .ForMember(dest => dest.Brand, opt => opt.Ignore());
 
 
         CreateMap<Brand, BrandDto>()
@@ -70,9 +72,9 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Descriptions))
             .ForMember(dest => dest.ImagePath, opt => opt.MapFrom(src => src.ImagePath));
 
-        // CreateMap<Color, ColorDto>()
-        //     .ForMember(dest => dest.ColorId, opt => opt.MapFrom(src => src.ColorId))
-        //     .ForMember(dest => dest.ColorName, opt => opt.MapFrom(src => src.ColorName));
+        CreateMap<Color, ColorDto>()
+            .ForMember(dest => dest.ColorId, opt => opt.MapFrom(src => src.ColorId))
+            .ForMember(dest => dest.ColorName, opt => opt.MapFrom(src => src.ColorName));
 
     }
 }
