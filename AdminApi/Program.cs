@@ -98,6 +98,7 @@ namespace AdminApi
             builder.Services.AddScoped<IColorServices, ColorServices>();
             builder.Services.AddScoped<INameTagServices, NameTagServices>();
             builder.Services.AddScoped<ISizeServices, SizeServices>();
+            builder.Services.AddScoped<IProductServices, ProductServices>();
 
             builder.Services.AddIdentityCore<User>(options =>
             {
