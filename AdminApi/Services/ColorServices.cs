@@ -35,5 +35,13 @@ namespace AdminApi.Services
         {
             return _context.Colors.ToListAsync();
         }
+
+        public async Task DeleteColor(int id)
+        {
+            var color = await _context.Colors.FindAsync(id);
+            _context.Colors.Remove(color!);
+            await _context.SaveChangesAsync();
+            await Task.CompletedTask;
+        }
     }
 }
