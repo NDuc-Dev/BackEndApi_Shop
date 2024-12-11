@@ -129,7 +129,6 @@ namespace AdminApi
             builder.Services.AddAuthorization(options =>
             {
                 options.AddPolicy("OnlyAdminRole", policy => policy.RequireRole("Admin"));
-                options.AddPolicy("RequireUserRole", policy => policy.RequireRole("User"));
             });
 
             var app = builder.Build();
