@@ -6,10 +6,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Shared.Data;
 using Shared.Models;
-using WebIdentityApi.Extensions;
+using AdminApi.Extensions;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AdminApi.Controllers
 {
+    [Authorize(Policy = "OnlyAdminRole")]
     [Route("api/manage/[controller]")]
     [ApiController]
     public class BrandController : ControllerBase
@@ -139,41 +141,40 @@ namespace AdminApi.Controllers
                 };
                 return BadRequest(respone);
             }
+            if (!_imageServices.ProcessImageExtension(model.Image))
+            {
+                return StatusCode(StatusCodes.Status400BadRequest, new ResponseView()
+                {
+                    Success = false,
+                    Error = new ErrorView
+                    {
+                        Code = "INVALID_DATA",
+                        Message = "Invalid image format. Only JPG, JPEG, and PNG files are allowed."
+                    }
+                });
+            }
+            if (await _context.IsExistsAsync<Brand>("BrandName", model.BrandName))
+            {
+                var message = $"Brand name {model.BrandName} has been exist, please try with another name";
+                return StatusCode(StatusCodes.Status400BadRequest, new ResponseView
+                {
+                    Success = false,
+                    Message = message,
+                    Error = new ErrorView
+                    {
+                        Code = "DUPPLICATE_NAME",
+                        Message = message
+                    }
+                });
+            }
             using (var transaction = await _context.Database.BeginTransactionAsync())
             {
                 try
                 {
-                    if (!_imageServices.ProcessImageExtension(model.Image))
-                    {
-                        return StatusCode(StatusCodes.Status400BadRequest, new ResponseView()
-                        {
-                            Success = false,
-                            Error = new ErrorView
-                            {
-                                Code = "INVALID_DATA",
-                                Message = "Invalid image format. Only JPG, JPEG, and PNG files are allowed."
-                            }
-                        });
-                    }
                     string filePath = await _imageServices.CreatePathForImg("brands", model.Image);
-                    if (await _context.IsExistsAsync<Brand>("BrandName", model.BrandName))
-                    {
-                        var message = $"Brand name {model.BrandName} has been exist, please try with another name";
-                        return StatusCode(StatusCodes.Status400BadRequest, new ResponseView
-                        {
-                            Success = false,
-                            Message = message,
-                            Error = new ErrorView
-                            {
-                                Code = "DUPPLICATE_NAME",
-                                Message = message
-                            }
-                        });
-                    }
                     var brand = await _brandServices.CreateBrandAsync(model, user!, filePath);
-                    var brandDto = _mapper.Map<BrandDto>(brand);
                     await transaction.CommitAsync();
-                    await _auditLog.LogActionAsync(user!, "Create", "Brand", brandDto.BrandId.ToString(), null);
+                    await _auditLog.LogActionAsync(user!, "Create", "Brand", brand.BrandId.ToString(), null);
                     return StatusCode(StatusCodes.Status201Created, new ResponseView<Brand>()
                     {
                         Success = true,

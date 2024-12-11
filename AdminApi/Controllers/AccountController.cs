@@ -3,7 +3,6 @@ using System.Text;
 using AdminApi.DTOs.Email;
 using AdminApi.DTOs.User;
 using AdminApi.Interfaces;
-using AdminApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

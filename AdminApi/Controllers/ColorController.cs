@@ -4,21 +4,28 @@ using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Data;
 using Shared.Models;
-using WebIdentityApi.Extensions;
+using AdminApi.Extensions;
+using AdminApi.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AdminApi.Controllers
 {
 #nullable disable
+    [Authorize("OnlyAdminRole")]
     [Route("api/manage/[controller]")]
     [ApiController]
     public class ColorController : ControllerBase
     {
         private readonly UserServices _userServices;
         private ApplicationDbContext _context;
-        private readonly ColorServices _colorServices;
-        private readonly AuditLogService _auditLogServices;
+        private readonly IColorServices _colorServices;
+        private readonly IAuditLogServices _auditLogServices;
         private readonly IMapper _mapper;
-        public ColorController(UserServices userServices, ApplicationDbContext context, ColorServices colorServices, AuditLogService auditLogServices, IMapper mapper)
+        public ColorController(UserServices userServices,
+        ApplicationDbContext context,
+        IColorServices colorServices,
+        IAuditLogServices auditLogServices,
+        IMapper mapper)
         {
             _context = context;
             _userServices = userServices;
