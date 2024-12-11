@@ -2,7 +2,7 @@ using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Shared.Data;
 
-namespace WebIdentityApi.Extensions
+namespace AdminApi.Extensions
 {
     public static class EntityExtension
     {
