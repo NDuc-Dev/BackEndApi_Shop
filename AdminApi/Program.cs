@@ -8,6 +8,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Text;
 using AdminApi.Interfaces;
 using AdminApi.Services;
+using AdminApi.Setting;
+using Microsoft.Extensions.Options;
+using CloudinaryDotNet;
 namespace AdminApi
 {
     public class Program
@@ -17,6 +20,16 @@ namespace AdminApi
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
+
+            //Cloudinary
+            builder.Services.Configure<CloudinarySettings>(
+            builder.Configuration.GetSection("CloudinarySettings"));
+            builder.Services.AddSingleton(provider =>
+            {
+                var config = provider.GetService<IOptions<CloudinarySettings>>()?.Value;
+                var account = new Account(config?.CloudName, config?.ApiKey, config?.ApiSecret);
+                return new Cloudinary(account);
+            });
 
             //Serilog
             Log.Logger = new LoggerConfiguration()
@@ -99,6 +112,7 @@ namespace AdminApi
             builder.Services.AddScoped<INameTagServices, NameTagServices>();
             builder.Services.AddScoped<ISizeServices, SizeServices>();
             builder.Services.AddScoped<IProductServices, ProductServices>();
+            builder.Services.AddScoped<CloudinaryService>();
 
             builder.Services.AddIdentityCore<User>(options =>
             {
