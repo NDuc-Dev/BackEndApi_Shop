@@ -22,12 +22,14 @@ namespace AdminApi.Controllers
         private readonly IAuditLogServices _auditLog;
         private ApplicationDbContext _context;
         private readonly IImageServices _imageServices;
+        private readonly CloudinaryService _cloudinaryServices;
         public BrandController(UserServices userServices,
         IBrandServices brandServices,
         IMapper mapper,
         IAuditLogServices auditLog,
         ApplicationDbContext context,
-        IImageServices imageServices)
+        IImageServices imageServices,
+        CloudinaryService cloudinaryServices)
         {
             _userServices = userServices;
             _brandServices = brandServices;
@@ -35,6 +37,7 @@ namespace AdminApi.Controllers
             _auditLog = auditLog;
             _context = context;
             _imageServices = imageServices;
+            _cloudinaryServices = cloudinaryServices;
         }
 
         [HttpGet("get-brands")]
@@ -171,7 +174,8 @@ namespace AdminApi.Controllers
             {
                 try
                 {
-                    string filePath = await _imageServices.CreatePathForImg("brands", model.Image);
+                    // string filePath = await _imageServices.CreatePathForImg("brands", model.Image);
+                    string filePath = await _cloudinaryServices.UploadImageAsync(model.Image, "Brand");
                     var brand = await _brandServices.CreateBrandAsync(model, user!, filePath);
                     await transaction.CommitAsync();
                     await _auditLog.LogActionAsync(user!, "Create", "Brand", brand.BrandId.ToString(), null);
@@ -234,5 +238,20 @@ namespace AdminApi.Controllers
         //         }
         //     }
         // }
+
+
+        [HttpPost("upload")]
+        public async Task<IActionResult> UploadImage(IFormFile file, string folder)
+        {
+            try
+            {
+                var imageUrl = await _cloudinaryServices.UploadImageAsync(file, folder);
+                return Ok(new { ImageUrl = imageUrl });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Error = ex.Message });
+            }
+        }
     }
 }
