@@ -22,7 +22,7 @@ namespace AdminApi.Services
                 BrandName = model.BrandName,
                 Descriptions = model.Descriptions,
                 CreatedByUser = user,
-                ImagePath = Path.GetFileName(filePath)
+                ImagePath = filePath
             };
             await _context.Brands.AddAsync(brand);
             await _context.SaveChangesAsync();
