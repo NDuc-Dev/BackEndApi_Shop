@@ -1,4 +1,3 @@
-using AdminApi.DTOs;
 using AdminApi.DTOs.Product;
 using Shared.Models;
 
@@ -11,5 +10,6 @@ namespace AdminApi.Interfaces
         Task<ProductColor> CreateProductColorAsync(Product product, int colorId, decimal price, string imagePath);
         Task<ProductColorSize> CreateProductColorSizeAsync(ProductColor productColor, int sizeId, int quantity);
         Task<Product?> GetProductById(int id);
+        Task ChangeProductStatus(int productId);
     }
 }
