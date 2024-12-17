@@ -22,14 +22,14 @@ namespace AdminApi.Controllers
         private readonly IAuditLogServices _auditLog;
         private ApplicationDbContext _context;
         private readonly IImageServices _imageServices;
-        private readonly CloudinaryService _cloudinaryServices;
+        private readonly ICloudinaryServices _cloudinaryServices;
         public BrandController(UserServices userServices,
         IBrandServices brandServices,
         IMapper mapper,
         IAuditLogServices auditLog,
         ApplicationDbContext context,
         IImageServices imageServices,
-        CloudinaryService cloudinaryServices)
+        ICloudinaryServices cloudinaryServices)
         {
             _userServices = userServices;
             _brandServices = brandServices;
@@ -240,18 +240,18 @@ namespace AdminApi.Controllers
         // }
 
 
-        [HttpPost("upload")]
-        public async Task<IActionResult> UploadImage(IFormFile file, string folder)
-        {
-            try
-            {
-                var imageUrl = await _cloudinaryServices.UploadImageAsync(file, folder);
-                return Ok(new { ImageUrl = imageUrl });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Error = ex.Message });
-            }
-        }
+        // [HttpPost("upload")]
+        // public async Task<IActionResult> UploadImage(IFormFile file, string folder)
+        // {
+        //     try
+        //     {
+        //         var imageUrl = await _cloudinaryServices.UploadImageAsync(file, folder);
+        //         return Ok(new { ImageUrl = imageUrl });
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         return BadRequest(new { Error = ex.Message });
+        //     }
+        // }
     }
 }
