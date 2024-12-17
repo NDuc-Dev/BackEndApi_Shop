@@ -105,14 +105,13 @@ namespace AdminApi
             builder.Services.AddScoped<IJwtServices, JwtServices>();
             builder.Services.AddScoped<IEmailServices, EmailServices>();
             builder.Services.AddScoped<UserServices>();
-            builder.Services.AddScoped<IImageServices, ImageServices>();
             builder.Services.AddScoped<IAuditLogServices, AuditLogService>();
             builder.Services.AddScoped<IBrandServices, BrandServices>();
             builder.Services.AddScoped<IColorServices, ColorServices>();
             builder.Services.AddScoped<INameTagServices, NameTagServices>();
             builder.Services.AddScoped<ISizeServices, SizeServices>();
             builder.Services.AddScoped<IProductServices, ProductServices>();
-            builder.Services.AddScoped<CloudinaryService>();
+            builder.Services.AddScoped<ICloudinaryServices, CloudinaryServices>();
 
             builder.Services.AddIdentityCore<User>(options =>
             {
