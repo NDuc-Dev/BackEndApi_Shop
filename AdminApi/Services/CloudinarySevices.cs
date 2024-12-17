@@ -1,12 +1,13 @@
+using AdminApi.Interfaces;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 namespace AdminApi.Services
 {
-    public class CloudinaryService
+    public class CloudinaryServices : ICloudinaryServices
     {
         private readonly Cloudinary _cloudinary;
 
-        public CloudinaryService(Cloudinary cloudinary)
+        public CloudinaryServices(Cloudinary cloudinary)
         {
             _cloudinary = cloudinary;
         }
@@ -33,8 +34,9 @@ namespace AdminApi.Services
             return uploadResult.SecureUrl.ToString(); // Trả về URL của ảnh đã upload
         }
 
-        public async Task<string> UploadBase64ImageAsync(string base64String, string fileName, string folder)
+        public async Task<string> UploadBase64ImageAsync(string base64String, string folder)
         {
+            string fileName = Guid.NewGuid().ToString() + "_" + ".jpg";
             if (string.IsNullOrWhiteSpace(base64String))
                 throw new ArgumentException("Base64 string is null or empty");
 
