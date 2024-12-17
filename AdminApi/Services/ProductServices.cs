@@ -68,7 +68,7 @@ namespace AdminApi.Services
             await _context.SaveChangesAsync();
             return productColorSize;
         }
-        
+
         public Task<Product?> GetProductById(int id)
         {
             var product = _context.Products
@@ -84,6 +84,15 @@ namespace AdminApi.Services
             .FirstOrDefaultAsync(p => p.ProductId == id);
 
             return product;
+        }
+
+        public async Task ChangeProductStatus(int productId)
+        {
+            var product = await _context.Products.FirstOrDefaultAsync(p => p.ProductId == productId);
+            product!.Status = product.Status ? false : true;
+            _context.Products.Update(product);
+            await _context.SaveChangesAsync();
+            await Task.CompletedTask;
         }
     }
 }
