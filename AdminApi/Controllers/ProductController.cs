@@ -5,6 +5,7 @@ using AdminApi.Extensions;
 using AdminApi.Interfaces;
 using AdminApi.Services;
 using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Shared.Data;
@@ -12,6 +13,7 @@ using Shared.Models;
 
 namespace AdminApi.Controllers
 {
+    [Authorize("OnlyAdminRole")]
     [Route("api/manage/[controller]")]
     [ApiController]
     public class ProductController : ControllerBase
@@ -311,23 +313,222 @@ namespace AdminApi.Controllers
                     }
                 });
             }
-
         }
+
+        [HttpPost("update-product")]
+        public async Task<IActionResult> UpdateProduct(UpdateProductDto model)
+        {
+            var logs = new List<(User actor, string action, string affectedTable, string objId)>();
+            var user = await _userServices.GetCurrentUserAsync();
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                return BadRequest(new ErrorViewForModelState
+                {
+                    Success = false,
+                    Error = new ErrorModelStateView
+                    {
+                        Code = "INVALID_INPUT",
+                        Errors = errors
+                    }
+                });
+            }
+
+            var product = await _context.Products
+                .Include(p => p.NameTags)
+                .Include(p => p.ProductColor)
+                .ThenInclude(pc => pc.ProductColorSizes)
+                .FirstOrDefaultAsync(p => p.ProductId == model.ProductId);
+
+            if (product == null)
+            {
+                return StatusCode(StatusCodes.Status400BadRequest, new ResponseView
+                {
+                    Success = false,
+                    Message = "Product not found",
+                    Error = new ErrorView
+                    {
+                        Code = "NOT_FOUND",
+                        Message = "Product does not exist"
+                    }
+                });
+            }
+            try
+            {
+                var transaction = await _context.Database.BeginTransactionAsync();
+                product.ProductName = model.ProductName;
+                product.Description = model.Descriptions;
+                product.Status = model.Status;
+                product.BrandId = model.BrandId;
+
+                if (model.NameTag != null)
+                {
+                    var existingNameTags = product.NameTags.Select(nt => nt.NameTagId).ToList();
+                    var nameTagsToAdd = model.NameTag.Select(n => n.TagId).Except(existingNameTags).ToList();
+                    var nameTagsToRemove = existingNameTags.Except(model.NameTag.Select(n => n.TagId)).ToList();
+
+                    // Thêm NameTags mới
+                    if (!await ValidateProductNameTagsAsync(nameTagsToAdd))
+                    {
+                        await transaction.RollbackAsync();
+                        return BadRequest(new ResponseView
+                        {
+                            Success = false,
+                            Message = "Invalid NameTag",
+                            Error = new ErrorView
+                            {
+                                Code = "INVALID_DATA",
+                                Message = "One or more NameTags are invalid."
+                            }
+                        });
+                    }
+                    foreach (var tagId in nameTagsToAdd)
+                    {
+                        var newNameTag = new ProductNameTag { ProductId = product.ProductId, NameTagId = tagId };
+                        _context.ProductNameTags.Add(newNameTag);
+                        logs.Add((user!, "Create", "ProductNameTags", newNameTag.Id.ToString()));
+                    }
+
+                    // Xoá NameTags không còn
+                    foreach (var tagId in nameTagsToRemove)
+                    {
+                        var tagToRemove = product.NameTags.FirstOrDefault(nt => nt.NameTagId == tagId);
+                        if (tagToRemove != null)
+                        {
+                            _context.ProductNameTags.Remove(tagToRemove);
+                            logs.Add((user!, "Delete", "ProductNameTags", tagToRemove.Id.ToString()));
+                        }
+                    }
+                }
+
+                foreach (var variantDto in model.Variant)
+                {
+                    if (variantDto.ProductColorId == null)
+                    {
+                        // Tạo mới Variant
+                        var imagesPath = await UploadImagesAsync(variantDto.Images!);
+                        var newProductColor = new ProductColor
+                        {
+                            ProductId = product.ProductId,
+                            ColorId = variantDto.ColorId,
+                            Price = variantDto.UnitPrice,
+                            ImagePath = imagesPath
+                        };
+                        _context.ProductColors.Add(newProductColor);
+                        logs.Add((user!, "Create", "ProductColors", newProductColor.ProductColorId.ToString()));
+
+                        // Thêm Sizes cho Variant mới
+                        foreach (var sizeDto in variantDto.ProductColorSize!)
+                        {
+                            var newSize = new ProductColorSize
+                            {
+                                ProductColorId = newProductColor.ProductColorId,
+                                SizeId = sizeDto.SizeId,
+                                Quantity = sizeDto.Quantity
+                            };
+                            _context.ProductColorSizes.Add(newSize);
+                            logs.Add((user!, "Create", "ProductColorSizes", newSize.ProductColorSizeId.ToString()));
+                        }
+                    }
+                    else
+                    {
+                        // Cập nhật Variant
+                        var existingVariant = product.ProductColor.FirstOrDefault(pc => pc.ProductColorId == variantDto.ProductColorId);
+                        if (existingVariant != null)
+                        {
+                            existingVariant.ColorId = variantDto.ColorId;
+                            existingVariant.Price = variantDto.UnitPrice;
+
+                            // Cập nhật Sizes
+                            var existingSizes = existingVariant.ProductColorSizes.ToList();
+                            foreach (var sizeDto in variantDto.ProductColorSize!)
+                            {
+                                var existingSize = existingSizes.FirstOrDefault(sz => sz.SizeId == sizeDto.SizeId);
+                                if (existingSize != null)
+                                {
+                                    // Cập nhật size
+                                    existingSize.Quantity = sizeDto.Quantity;
+                                    logs.Add((user!, "Update", "ProductColorSizes", existingSize.ProductColorSizeId.ToString()));
+                                }
+                                else
+                                {
+                                    // Thêm size mới
+                                    var newSize = new ProductColorSize
+                                    {
+                                        ProductColorId = existingVariant.ProductColorId,
+                                        SizeId = sizeDto.SizeId,
+                                        Quantity = sizeDto.Quantity
+                                    };
+                                    _context.ProductColorSizes.Add(newSize);
+                                    logs.Add((user!, "Create", "ProductColorSizes", newSize.ProductColorSizeId.ToString()));
+                                }
+                            }
+
+                            // Xoá Sizes không còn
+                            var sizeIdsToRemove = existingSizes.Select(sz => sz.SizeId)
+                                                               .Except(variantDto.ProductColorSize.Select(sz => sz.SizeId))
+                                                               .ToList();
+                            foreach (var sizeId in sizeIdsToRemove)
+                            {
+                                var sizeToRemove = existingSizes.FirstOrDefault(sz => sz.SizeId == sizeId);
+                                if (sizeToRemove != null)
+                                {
+                                    _context.ProductColorSizes.Remove(sizeToRemove);
+                                    logs.Add((user!, "Delete", "ProductColorSizes", sizeToRemove.ProductColorSizeId.ToString()));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Commit transaction
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                // Ghi logs
+                foreach (var log in logs)
+                {
+                    await _auditlogServices.LogActionAsync(log.actor, log.action, log.affectedTable, log.objId);
+                }
+
+                return Ok(new ResponseView<Product>
+                {
+                    Success = true,
+                    Message = "Product updated successfully",
+                    Data = product
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView
+                {
+                    Success = false,
+                    Message = "An error occurred while updating the product",
+                    Error = new ErrorView
+                    {
+                        Code = "SERVER_ERROR",
+                        Message = ex.Message
+                    }
+                });
+            }
+        }
+
 
         #region Private Helper Method
-        private async Task<bool> ValidateProductAsync(int productId)
+        private Task<bool> ValidateProductAsync(int productId)
         {
-            return await _context.IsExistsAsync<Product>("ProductId", productId);
+            return _context.IsExistsAsync<Product>("ProductId", productId);
         }
-        private async Task<bool> ValidateProductNameAsync(string productName)
+        private Task<bool> ValidateProductNameAsync(string productName)
         {
-            return await _context.IsExistsAsync<Product>("ProductName", productName);
+            return _context.IsExistsAsync<Product>("ProductName", productName);
         }
-        private async Task<bool> ValidateBrandAsync(int brandId)
+        private Task<bool> ValidateBrandAsync(int brandId)
         {
-            return await _context.IsExistsAsync<Brand>("BrandId", brandId);
+            return _context.IsExistsAsync<Brand>("BrandId", brandId);
         }
-        private async Task<bool> ValidateNameTagsAsync(ICollection<int> nameTagIds)
+        private async Task<bool> ValidateProductNameTagsAsync(ICollection<int> nameTagIds)
         {
             if (nameTagIds == null || !nameTagIds.Any()) return true;
 
@@ -338,9 +539,19 @@ namespace AdminApi.Controllers
 
             return existingTags.Count == nameTagIds.Count;
         }
-        private async Task<bool> ValidateColorAsync(int colorId)
+        private async Task<bool> ValidateNameTagsAsync(ICollection<int> nameTagIds)
         {
-            return await _context.IsExistsAsync<Color>("ColorId", colorId);
+            if (nameTagIds == null || !nameTagIds.Any()) return false;
+            var existingTags = await _context.NameTags
+                .Where(nt => nameTagIds.Contains(nt.NameTagId))
+                .Select(nt => nt.NameTagId)
+                .ToListAsync();
+
+            return existingTags.Count == nameTagIds.Count;
+        }
+        private Task<bool> ValidateColorAsync(int colorId)
+        {
+            return _context.IsExistsAsync<Color>("ColorId", colorId);
         }
         private async Task<bool> ValidateSizesAsync(IEnumerable<int> sizeIds)
         {
