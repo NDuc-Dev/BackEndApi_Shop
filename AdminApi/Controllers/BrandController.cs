@@ -156,7 +156,7 @@ namespace AdminApi.Controllers
                     }
                 });
             }
-            if (await _context.IsExistsAsync<Brand>("BrandName", model.BrandName))
+            if (await ValidateBrandNameAsync(model.BrandName))
             {
                 var message = $"Brand name {model.BrandName} has been exist, please try with another name";
                 return StatusCode(StatusCodes.Status400BadRequest, new ResponseView
@@ -170,36 +170,31 @@ namespace AdminApi.Controllers
                     }
                 });
             }
-            using (var transaction = await _context.Database.BeginTransactionAsync())
+            try
             {
-                try
+                var transaction = await _context.Database.BeginTransactionAsync();
+                var brand = await CreateBrandAsync(model, user!, model.Image);
+                await transaction.CommitAsync();
+                await _auditLog.LogActionAsync(user!, "Create", "Brand", brand.BrandId.ToString(), null);
+                return StatusCode(StatusCodes.Status201Created, new ResponseView<Brand>()
                 {
-                    // string filePath = await _imageServices.CreatePathForImg("brands", model.Image);
-                    string filePath = await _cloudinaryServices.UploadImageAsync(model.Image, "Brand");
-                    var brand = await _brandServices.CreateBrandAsync(model, user!, filePath);
-                    await transaction.CommitAsync();
-                    await _auditLog.LogActionAsync(user!, "Create", "Brand", brand.BrandId.ToString(), null);
-                    return StatusCode(StatusCodes.Status201Created, new ResponseView<Brand>()
-                    {
-                        Success = true,
-                        Message = "Brand Created Successfully",
-                        Data = brand
-                    });
-                }
-                catch (Exception e)
+                    Success = true,
+                    Message = "Brand Created Successfully",
+                    Data = brand
+                });
+            }
+            catch (Exception e)
+            {
+                await _auditLog.LogActionAsync(user!, "Create", "Brand", null, e.ToString(), Serilog.Events.LogEventLevel.Error);
+                return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView()
                 {
-                    await transaction.RollbackAsync();
-                    await _auditLog.LogActionAsync(user!, "Create", "Brand", null, e.ToString(), Serilog.Events.LogEventLevel.Error);
-                    return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView()
+                    Success = false,
+                    Error = new ErrorView()
                     {
-                        Success = false,
-                        Error = new ErrorView()
-                        {
-                            Code = "SERVER_ERROR",
-                            Message = "An occured error while creating brand !"
-                        }
-                    });
-                }
+                        Code = "SERVER_ERROR",
+                        Message = "An occured error while creating brand !"
+                    }
+                });
             }
         }
 
@@ -253,5 +248,22 @@ namespace AdminApi.Controllers
         //         return BadRequest(new { Error = ex.Message });
         //     }
         // }
+
+        #region Private Helper Method
+        private Task<bool> ValidateBrandNameAsync(string BrandName)
+        {
+            return _context.IsExistsAsync<Brand>("BrandName", BrandName);
+        }
+        private Task<string> UploadImageAsync(IFormFile image)
+        {
+            return _cloudinaryServices.UploadImageAsync(image, "Brands");
+        }
+        private async Task<Brand> CreateBrandAsync(CreateBrandDto model, User user, IFormFile image)
+        {
+            string filePath = await UploadImageAsync(image);
+            var brand = await _brandServices.CreateBrandAsync(model, user!, filePath);
+            return brand;
+        }
+        #endregion
     }
 }
