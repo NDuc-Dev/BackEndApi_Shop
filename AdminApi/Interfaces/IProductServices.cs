@@ -11,5 +11,7 @@ namespace AdminApi.Interfaces
         Task<ProductColorSize> CreateProductColorSizeAsync(ProductColor productColor, int sizeId, int quantity);
         Task<Product?> GetProductById(int id);
         Task ChangeProductStatus(int productId);
+        Task<List<ProductColor>> GetProductVariants(int productId);
+        Task<ProductColor?> GetProductVariantById(int variantId);
     }
 }
