@@ -1,4 +1,5 @@
 using AdminApi.DTOs.Product;
+using AdminApi.DTOs.ProductColor;
 using AdminApi.Interfaces;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
@@ -71,7 +72,7 @@ namespace AdminApi.Services
 
         public Task<Product?> GetProductById(int id)
         {
-            var product = _context.Products
+            return _context.Products
             .Include(p => p.Brand)
             .Include(p => p.CreatedByUser)
             .Include(p => p.NameTags)
@@ -82,8 +83,17 @@ namespace AdminApi.Services
             .ThenInclude(pc => pc.ProductColorSizes)
             .ThenInclude(pc => pc.Size)
             .FirstOrDefaultAsync(p => p.ProductId == id);
+ 
+        }
 
-            return product;
+        public Task<List<ProductColor>> GetProductVariants(int productId)
+        {
+            return _context.ProductColors.Where(pc => pc.ProductId == productId).ToListAsync();
+        }
+
+        public Task<ProductColor?> GetProductVariantById(int variantId)
+        {
+            return _context.ProductColors.Include(pcs => pcs.ProductColorSizes).FirstOrDefaultAsync(pc => pc.ProductColorId == variantId);
         }
 
         public async Task ChangeProductStatus(int productId)
@@ -94,5 +104,6 @@ namespace AdminApi.Services
             await _context.SaveChangesAsync();
             await Task.CompletedTask;
         }
+
     }
 }
