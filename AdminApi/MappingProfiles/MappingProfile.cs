@@ -24,17 +24,13 @@ public class MappingProfile : Profile
         CreateMap<Product, ProductDto>()
             .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.ProductName))
             .ForMember(dest => dest.ProductDescription, opt => opt.MapFrom(src => src.Description))
-            .ForMember(dest => dest.Tag, opt => opt.MapFrom(src => src.NameTags.Select(nt => nt.NameTag)))
-            .ForMember(dest => dest.Brand, opt => opt.MapFrom(src => src.Brand))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
-            .ForMember(dest => dest.Variant, opt => opt.MapFrom(src => src.ProductColor));
+            .ForMember(dest => dest.ImagePath, opt => opt.MapFrom(src => src.ProductColor.Select(pc => pc.ImagePath.Split(';', System.StringSplitOptions.RemoveEmptyEntries).First()).First()));
 
         CreateMap<NameTag, NameTagDto>()
-            .ForMember(dest => dest.TagId, opt => opt.MapFrom(src => src.NameTagId))
-            .ForMember(dest => dest.TagName, opt => opt.MapFrom(src => src.Tag));
+            .ForMember(dest => dest.TagId, opt => opt.MapFrom(src => src.NameTagId));
 
         CreateMap<ProductColor, ProductColorDto>()
-            .ForMember(dest => dest.ColorName, opt => opt.MapFrom(src => src.Color.ColorName))
             .ForMember(dest => dest.ColorId, opt => opt.MapFrom(src => src.ColorId))
             .ForMember(dest => dest.UnitPrice, opt => opt.MapFrom(src => src.Price))
             .ForMember(dest => dest.ProductColorId, opt => opt.MapFrom(src => src.ProductColorId))
@@ -52,17 +48,15 @@ public class MappingProfile : Profile
         CreateMap<ProductColorSize, ProductColorSizeDto>()
             .ForMember(dest => dest.ProductColorSizeId, opt => opt.MapFrom(src => src.ProductColorSizeId))
             .ForMember(dest => dest.ProductColorId, opt => opt.MapFrom(src => src.ProductColorId))
-            .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity))
-            .ForMember(dest => dest.SizeValue, opt => opt.MapFrom(src => src.Size.SizeValue))
-            .ForMember(dest => dest.SizeId, opt => opt.MapFrom(src => src.Size.SizeId));
+            .ForMember(dest => dest.SizeId, opt => opt.MapFrom(src => src.SizeId))
+            .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity));
 
 
-        // CreateMap<Product, ListProductDto>()
-        //     .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.ProductName))
-        //     .ForMember(dest => dest.ProductDescription, opt => opt.MapFrom(src => src.Description))
-        //     .ForMember(dest => dest.Brand, opt => opt.MapFrom(src => src.Brand))
-        //     .ForMember(dest => dest.Tag, opt => opt.MapFrom(src => src.NameTags.Select(t => t.NameTag)))
-        //     .ForMember(dest => dest.ImagePath, opt => opt.MapFrom(src => src.ProductColor.Select(pc => pc.ImagePath.Split(';', System.StringSplitOptions.RemoveEmptyEntries).First()).First()));
+        CreateMap<Product, ProductListDto>()
+            .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.ProductName))
+            .ForMember(dest => dest.ProductDescription, opt => opt.MapFrom(src => src.Description))
+            .ForMember(dest => dest.BrandName, opt => opt.MapFrom(src => src.Brand.BrandName))
+            .ForMember(dest => dest.ImagePath, opt => opt.MapFrom(src => src.ProductColor.Select(pc => pc.ImagePath.Split(';', System.StringSplitOptions.RemoveEmptyEntries).First()).First()));
 
         CreateMap<CreateProductDto, Product>()
             .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.ProductName))
