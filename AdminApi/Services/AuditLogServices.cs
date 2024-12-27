@@ -1,3 +1,4 @@
+using AdminApi.DTOs.AuditLog;
 using AdminApi.Interfaces;
 using Serilog;
 using Serilog.Events;
@@ -7,38 +8,44 @@ namespace AdminApi.Services
 {
     public class AuditLogService : IAuditLogServices
     {
-        public async Task LogActionAsync(User user, string actionName, string? table = null, string? objId = null, string? exception = null, LogEventLevel? level = LogEventLevel.Information)
+        public async Task LogActionAsync(List<AuditLogDto> logs)
         {
-            var logEntry = new AuditLog
+            foreach (var log in logs)
             {
-                ActorId = user.Id,
-                ActorName = user.FullName,
-                Action = actionName,
-                AffectedTable = table,
-                TimeStamp = DateTime.Now,
-                ObjId = objId,
-                Exception = exception
-            };
+                var logEntry = new AuditLog
+                {
+                    ActorId = log.UserId,
+                    ActorName = log.UserName,
+                    Action = log.ActionName,
+                    AffectedTable = log.AffectedTable,
+                    TimeStamp = DateTime.Now,
+                    ObjId = log.ObjId,
+                    Exception = log.Exception
+                };
+                var logger = Log.ForContext("AuditLog", true);
 
-            var logger = Log.ForContext("AuditLog", true);
-
-            switch (level)
-            {
-                case LogEventLevel.Information:
-                    logger.Information("Audit log: {@LogEntry}", logEntry);
-                    break;
-                case LogEventLevel.Warning:
-                    logger.Warning("Audit log: {@LogEntry}", logEntry);
-                    break;
-                case LogEventLevel.Error:
-                    logger.Error("Audit log: {@LogEntry}", logEntry);
-                    break;
-                default:
-                    logger.Debug("Audit log: {@LogEntry}", logEntry);
-                    break;
+                switch (log.Level)
+                {
+                    case LogEventLevel.Information:
+                        logger.Information("Audit log: {@LogEntry}", logEntry);
+                        break;
+                    case LogEventLevel.Warning:
+                        logger.Warning("Audit log: {@LogEntry}", logEntry);
+                        break;
+                    case LogEventLevel.Error:
+                        logger.Error("Audit log: {@LogEntry}", logEntry);
+                        break;
+                    default:
+                        logger.Debug("Audit log: {@LogEntry}", logEntry);
+                        break;
+                }
             }
-
             await Task.CompletedTask;
+        }
+
+        public AuditLogDto CreateLog(User user, string action, string affectedTable, string? objId, string? exception, LogEventLevel? level)
+        {
+            return new AuditLogDto(user.Id, user.FullName, action, affectedTable, objId, exception, level);
         }
     }
 }
