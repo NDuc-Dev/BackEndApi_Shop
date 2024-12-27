@@ -7,10 +7,10 @@ using Shared.Models;
 using AdminApi.Extensions;
 using AdminApi.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using AdminApi.DTOs.AuditLog;
 
 namespace AdminApi.Controllers
 {
-#nullable disable
     [Authorize("OnlyAdminRole")]
     [Route("api/manage/[controller]")]
     [ApiController]
@@ -36,6 +36,7 @@ namespace AdminApi.Controllers
         [HttpPost("create-color")]
         public async Task<IActionResult> CreateColor(CreateColorDto model)
         {
+            var logs = new List<AuditLogDto>();
             var user = await _userServices.GetCurrentUserAsync();
             if (!ModelState.IsValid)
             {
@@ -52,7 +53,7 @@ namespace AdminApi.Controllers
                 return BadRequest(respone);
             }
             string message;
-            if (await _context.IsExistsAsync<Color>("ColorName", model.ColorName))
+            if (await _context.IsExistsAsync<Color>("ColorName", model.ColorName!))
             {
                 message = $"Color name {model.ColorName} has been exist, please try with another name";
                 return StatusCode(StatusCodes.Status400BadRequest, new ResponseView
@@ -70,9 +71,10 @@ namespace AdminApi.Controllers
             {
                 try
                 {
-                    var color = await _colorServices.CreateColorAsync(model, user);
+                    var color = await _colorServices.CreateColorAsync(model, user!);
                     await transaction.CommitAsync();
-                    await _auditLogServices.LogActionAsync(user, "Create", "Color", color.ColorId.ToString(), null, Serilog.Events.LogEventLevel.Information);
+                    logs.Add(_auditLogServices.CreateLog(user!, "Create", "Color", color.ColorId.ToString()));
+                    await _auditLogServices.LogActionAsync(logs);
                     return StatusCode(StatusCodes.Status201Created, new ResponseView<Color>
                     {
                         Success = true,
@@ -83,7 +85,8 @@ namespace AdminApi.Controllers
                 catch (Exception e)
                 {
                     await transaction.RollbackAsync();
-                    await _auditLogServices.LogActionAsync(user, "Create", "Color", null, e.ToString(), Serilog.Events.LogEventLevel.Error);
+                    logs.Add(_auditLogServices.CreateLog(user!, "Create", "Color", null, e.ToString(), Serilog.Events.LogEventLevel.Error));
+                    await _auditLogServices.LogActionAsync(logs);
                     return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView()
                     {
                         Success = false,
@@ -101,6 +104,7 @@ namespace AdminApi.Controllers
         public async Task<IActionResult> GetColors()
         {
             var user = await _userServices.GetCurrentUserAsync();
+            var logs = new List<AuditLogDto>();
             try
             {
                 var colors = await _colorServices.GetColors();
@@ -123,7 +127,8 @@ namespace AdminApi.Controllers
             }
             catch (Exception e)
             {
-                await _auditLogServices.LogActionAsync(user, "Get Colors", "Color", null, e.ToString(), Serilog.Events.LogEventLevel.Error);
+                logs.Add(_auditLogServices.CreateLog(user!, "Get Colors", "Color", null, e.ToString(), Serilog.Events.LogEventLevel.Error));
+                await _auditLogServices.LogActionAsync(logs);
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView()
                 {
                     Success = false,
@@ -139,6 +144,7 @@ namespace AdminApi.Controllers
         [HttpGet("get-color/{id}")]
         public async Task<IActionResult> GetColorById(int id)
         {
+            var logs = new List<AuditLogDto>();
             var user = await _userServices.GetCurrentUserAsync();
             try
             {
@@ -164,7 +170,8 @@ namespace AdminApi.Controllers
             }
             catch (Exception e)
             {
-                await _auditLogServices.LogActionAsync(user, "Get Color by id", "Color", null, e.ToString(), Serilog.Events.LogEventLevel.Error);
+                logs.Add(_auditLogServices.CreateLog(user!, "Get Color by id", "Color", null, e.ToString(), Serilog.Events.LogEventLevel.Error));
+                await _auditLogServices.LogActionAsync(logs);
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView()
                 {
                     Success = false,
@@ -180,6 +187,7 @@ namespace AdminApi.Controllers
         public async Task<IActionResult> DeleteColor(int id)
         {
             var user = await _userServices.GetCurrentUserAsync();
+            var logs = new List<AuditLogDto>();
             if (!await _context.IsExistsAsync<Color>("ColorId", id))
             {
                 var respone = new ResponseView()
@@ -195,7 +203,7 @@ namespace AdminApi.Controllers
             }
 
             var color = await _context.Colors.FindAsync(id);
-            if (color.ProductColor != null)
+            if (color!.ProductColor != null)
             {
                 return StatusCode(StatusCodes.Status400BadRequest, new ResponseView()
                 {
@@ -213,7 +221,8 @@ namespace AdminApi.Controllers
                 {
                     await _colorServices.DeleteColor(id);
                     await transaction.CommitAsync();
-                    await _auditLogServices.LogActionAsync(user, "Delete", "Color", id.ToString());
+                    logs.Add(_auditLogServices.CreateLog(user!, "Delete", "Color", id.ToString()));
+                    await _auditLogServices.LogActionAsync(logs);
                     return StatusCode(StatusCodes.Status200OK, new ResponseView()
                     {
                         Success = true,
@@ -223,7 +232,8 @@ namespace AdminApi.Controllers
                 catch (Exception e)
                 {
                     await transaction.RollbackAsync();
-                    await _auditLogServices.LogActionAsync(user, "Delete", "Color", null, e.ToString(), Serilog.Events.LogEventLevel.Error);
+                    logs.Add(_auditLogServices.CreateLog(user!, "Delete", "Color", null, e.ToString(), Serilog.Events.LogEventLevel.Error));
+                    await _auditLogServices.LogActionAsync(logs);
                     return StatusCode(StatusCodes.Status400BadRequest, new ResponseView()
                     {
                         Success = false,
