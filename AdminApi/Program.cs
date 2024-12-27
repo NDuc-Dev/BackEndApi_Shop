@@ -11,6 +11,8 @@ using AdminApi.Services;
 using AdminApi.Setting;
 using Microsoft.Extensions.Options;
 using CloudinaryDotNet;
+using Shared.Interfaces;
+using Shared.Repositories;
 namespace AdminApi
 {
     public class Program
@@ -112,7 +114,7 @@ namespace AdminApi
             builder.Services.AddScoped<ISizeServices, SizeServices>();
             builder.Services.AddScoped<IProductServices, ProductServices>();
             builder.Services.AddScoped<ICloudinaryServices, CloudinaryServices>();
-
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddIdentityCore<User>(options =>
             {
                 options.SignIn.RequireConfirmedEmail = true;
