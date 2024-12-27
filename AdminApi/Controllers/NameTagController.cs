@@ -6,6 +6,8 @@ using Shared.Models;
 using AdminApi.Extensions;
 using AutoMapper;
 using AdminApi.Interfaces;
+using Shared.Interfaces;
+using AdminApi.DTOs.AuditLog;
 
 namespace AdminApi.Controllers
 {
@@ -18,22 +20,27 @@ namespace AdminApi.Controllers
         private readonly UserServices _userServices;
         private readonly INameTagServices _nametagServices;
         private readonly IMapper _mapper;
+        private IUnitOfWork _unitOfWork;
         public NameTagController(ApplicationDbContext context,
         IAuditLogServices auditLogService,
         UserServices userServices,
         INameTagServices nametagServices,
-        IMapper mapper)
+        IMapper mapper,
+        IUnitOfWork unitOfWork)
         {
             _context = context;
             _auditlogServices = auditLogService;
             _userServices = userServices;
             _nametagServices = nametagServices;
             _mapper = mapper;
+            _unitOfWork = unitOfWork;
         }
 
         [HttpPost("create-name-tag")]
         public async Task<IActionResult> CreateNameTag(CreateNameTagDto model)
         {
+            var user = await _userServices.GetCurrentUserAsync();
+            var logs = new List<AuditLogDto>();
             if (!ModelState.IsValid)
             {
                 var err = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
@@ -49,7 +56,6 @@ namespace AdminApi.Controllers
                 return BadRequest(respone);
             }
             var message = "";
-            var user = await _userServices.GetCurrentUserAsync();
             if (user == null) return StatusCode(StatusCodes.Status404NotFound, new ResponseView()
             {
                 Success = false,
@@ -73,40 +79,41 @@ namespace AdminApi.Controllers
                     }
                 });
             }
-            using (var transaction = await _context.Database.BeginTransactionAsync())
+
+            try
             {
-                try
+                await _unitOfWork.BeginTransactionAsync();
+                var nameTag = await _nametagServices.CreateNameTagAsync(model, user);
+                var result = new ResponseView<NameTag>()
                 {
-                    var nameTag = await _nametagServices.CreateNameTagAsync(model, user);
-                    var result = new ResponseView<NameTag>()
-                    {
-                        Success = true,
-                        Data = nameTag,
-                        Message = "Create name tag successfully !"
-                    };
-                    await transaction.CommitAsync();
-                    await _auditlogServices.LogActionAsync(user, "Create", "NameTags", nameTag.NameTagId.ToString());
-                    return Ok(result);
-                }
-                catch (Exception)
+                    Success = true,
+                    Data = nameTag,
+                    Message = "Create name tag successfully !"
+                };
+                await _unitOfWork.CommitTransactionAsync();
+                logs.Add(_auditlogServices.CreateLog(user, "Create", "NameTags", nameTag.NameTagId.ToString()));
+                await _auditlogServices.LogActionAsync(logs);
+                return Ok(result);
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView()
                 {
-                    await transaction.RollbackAsync();
-                    return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView()
+                    Success = false,
+                    Error = new ErrorView()
                     {
-                        Success = false,
-                        Error = new ErrorView()
-                        {
-                            Code = "SERVER_ERROR",
-                            Message = "Have an occured error while create name tag !"
-                        }
-                    });
-                }
+                        Code = "SERVER_ERROR",
+                        Message = "Have an occured error while create name tag !"
+                    }
+                });
             }
         }
 
         [HttpGet("get-name-tag/{id}")]
         public async Task<IActionResult> GetNameTagById(int id)
         {
+            var logs = new List<AuditLogDto>();
             var user = await _userServices.GetCurrentUserAsync();
             try
             {
@@ -130,7 +137,8 @@ namespace AdminApi.Controllers
             }
             catch (Exception e)
             {
-                await _auditlogServices.LogActionAsync(user!, "Get", "NameTags", null, e.ToString(), Serilog.Events.LogEventLevel.Error);
+                logs.Add(_auditlogServices.CreateLog(user!, "Get", "NameTags", null, e.ToString(), Serilog.Events.LogEventLevel.Error));
+                await _auditlogServices.LogActionAsync(logs);
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView()
                 {
                     Success = false,
@@ -142,10 +150,11 @@ namespace AdminApi.Controllers
                 });
             }
         }
-        
+
         [HttpGet("get-name-tag")]
         public async Task<IActionResult> GetNameTags()
         {
+            var logs = new List<AuditLogDto>();
             var user = await _userServices.GetCurrentUserAsync();
             try
             {
@@ -170,7 +179,8 @@ namespace AdminApi.Controllers
             }
             catch (Exception e)
             {
-                await _auditlogServices.LogActionAsync(user!, "Get", "NameTags", null, e.ToString(), Serilog.Events.LogEventLevel.Error);
+                logs.Add(_auditlogServices.CreateLog(user!, "Get", "NameTags", null, e.ToString(), Serilog.Events.LogEventLevel.Error));
+                await _auditlogServices.LogActionAsync(logs);
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView()
                 {
                     Success = false,
