@@ -8,6 +8,7 @@ using Shared.Data;
 using Shared.Models;
 using AdminApi.Extensions;
 using Microsoft.AspNetCore.Authorization;
+using AdminApi.DTOs.AuditLog;
 
 namespace AdminApi.Controllers
 {
@@ -19,14 +20,14 @@ namespace AdminApi.Controllers
         private readonly UserServices _userServices;
         private readonly IBrandServices _brandServices;
         private readonly IMapper _mapper;
-        private readonly IAuditLogServices _auditLog;
+        private readonly IAuditLogServices _auditLogServices;
         private ApplicationDbContext _context;
         private readonly IImageServices _imageServices;
         private readonly ICloudinaryServices _cloudinaryServices;
         public BrandController(UserServices userServices,
         IBrandServices brandServices,
         IMapper mapper,
-        IAuditLogServices auditLog,
+        IAuditLogServices auditLogServices,
         ApplicationDbContext context,
         IImageServices imageServices,
         ICloudinaryServices cloudinaryServices)
@@ -34,7 +35,7 @@ namespace AdminApi.Controllers
             _userServices = userServices;
             _brandServices = brandServices;
             _mapper = mapper;
-            _auditLog = auditLog;
+            _auditLogServices = auditLogServices;
             _context = context;
             _imageServices = imageServices;
             _cloudinaryServices = cloudinaryServices;
@@ -44,6 +45,7 @@ namespace AdminApi.Controllers
         public async Task<IActionResult> GetBrands()
         {
             var user = await _userServices.GetCurrentUserAsync();
+            var logs = new List<AuditLogDto>();
             try
             {
                 var brands = await _brandServices.GetBrands();
@@ -71,7 +73,8 @@ namespace AdminApi.Controllers
             }
             catch (Exception e)
             {
-                await _auditLog.LogActionAsync(user!, "Get brands", "Brand", null, e.ToString(), Serilog.Events.LogEventLevel.Error);
+                logs.Add(_auditLogServices.CreateLog(user!, "Get brands", "Brand", null, e.ToString(), Serilog.Events.LogEventLevel.Error));
+                await _auditLogServices.LogActionAsync(logs);
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView
                 {
                     Success = false,
@@ -88,6 +91,7 @@ namespace AdminApi.Controllers
         public async Task<IActionResult> GetBrandById(int id)
         {
             var user = await _userServices.GetCurrentUserAsync();
+            var logs = new List<AuditLogDto>();
             try
             {
                 var brand = await _brandServices.GetBrandById(id);
@@ -113,7 +117,8 @@ namespace AdminApi.Controllers
             }
             catch (Exception e)
             {
-                await _auditLog.LogActionAsync(user!, "Get brand by id", "Brand", null, e.ToString(), Serilog.Events.LogEventLevel.Error);
+                logs.Add(_auditLogServices.CreateLog(user!, "Get brand by id", "Brand", null, e.ToString(), Serilog.Events.LogEventLevel.Error));
+                await _auditLogServices.LogActionAsync(logs);
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView()
                 {
                     Success = false,
@@ -129,6 +134,7 @@ namespace AdminApi.Controllers
         [HttpPost("create-brand")]
         public async Task<IActionResult> CreateBrand([FromForm] CreateBrandDto model)
         {
+            var logs = new List<AuditLogDto>();
             var user = await _userServices.GetCurrentUserAsync();
             if (!ModelState.IsValid)
             {
@@ -175,7 +181,8 @@ namespace AdminApi.Controllers
                 var transaction = await _context.Database.BeginTransactionAsync();
                 var brand = await CreateBrandAsync(model, user!, model.Image);
                 await transaction.CommitAsync();
-                await _auditLog.LogActionAsync(user!, "Create", "Brand", brand.BrandId.ToString(), null);
+                logs.Add(_auditLogServices.CreateLog(user!, "Create", "Brand", brand.BrandId.ToString()));
+                await _auditLogServices.LogActionAsync(logs);
                 return StatusCode(StatusCodes.Status201Created, new ResponseView<Brand>()
                 {
                     Success = true,
@@ -185,7 +192,8 @@ namespace AdminApi.Controllers
             }
             catch (Exception e)
             {
-                await _auditLog.LogActionAsync(user!, "Create", "Brand", null, e.ToString(), Serilog.Events.LogEventLevel.Error);
+                logs.Add(_auditLogServices.CreateLog(user!, "Create", "Brand", null, e.ToString(), Serilog.Events.LogEventLevel.Error));
+                await _auditLogServices.LogActionAsync(logs);
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView()
                 {
                     Success = false,
