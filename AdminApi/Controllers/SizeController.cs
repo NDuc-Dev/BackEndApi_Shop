@@ -1,4 +1,4 @@
-using System.Transactions;
+using AdminApi.DTOs.AuditLog;
 using AdminApi.DTOs.Size;
 using AdminApi.Interfaces;
 using AdminApi.Services;
@@ -34,6 +34,7 @@ namespace AdminApi.Controllers
         [HttpGet("get-sizes")]
         public async Task<IActionResult> GetSizes()
         {
+            var logs = new List<AuditLogDto>();
             var user = await _userServices.GetCurrentUserAsync();
             try
             {
@@ -58,7 +59,8 @@ namespace AdminApi.Controllers
             }
             catch (Exception e)
             {
-                await _auditlogServices.LogActionAsync(user!, "Get", "Sizes", null, e.ToString(), Serilog.Events.LogEventLevel.Error);
+                logs.Add(_auditlogServices.CreateLog(user!, "Get sizes", "Sizes", null, e.ToString(), Serilog.Events.LogEventLevel.Error));
+                await _auditlogServices.LogActionAsync(logs);
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView()
                 {
                     Success = false,
@@ -75,6 +77,7 @@ namespace AdminApi.Controllers
         [HttpGet("get-size/{id}")]
         public async Task<IActionResult> GetSizeById(int id)
         {
+            var logs = new List<AuditLogDto>();
             var user = await _userServices.GetCurrentUserAsync();
             try
             {
@@ -98,7 +101,8 @@ namespace AdminApi.Controllers
             }
             catch (Exception e)
             {
-                await _auditlogServices.LogActionAsync(user!, "Get", "Sizes", null, e.ToString(), Serilog.Events.LogEventLevel.Error);
+                logs.Add(_auditlogServices.CreateLog(user!, "Get size", "Sizes", null, e.ToString(), Serilog.Events.LogEventLevel.Error));
+                await _auditlogServices.LogActionAsync(logs);
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView()
                 {
                     Success = false,
@@ -114,6 +118,7 @@ namespace AdminApi.Controllers
         [HttpPost("create-size")]
         public async Task<IActionResult> CreateSize(CreateSizeDto model)
         {
+            var logs = new List<AuditLogDto>();
             if (!ModelState.IsValid)
             {
                 var err = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
@@ -135,7 +140,8 @@ namespace AdminApi.Controllers
                 {
                     var size = await _sizeServices.CreateSizeAsync(model, user!);
                     await transaction.CommitAsync();
-                    await _auditlogServices.LogActionAsync(user!, "Create", "Sizes", size.SizeId.ToString());
+                    logs.Add(_auditlogServices.CreateLog(user!, "Create Size", "Sizes", size.SizeId.ToString()));
+                    await _auditlogServices.LogActionAsync(logs);
                     return StatusCode(StatusCodes.Status201Created, new ResponseView<Size>()
                     {
                         Success = true,
@@ -145,7 +151,8 @@ namespace AdminApi.Controllers
                 }
                 catch (Exception e)
                 {
-                    await _auditlogServices.LogActionAsync(user!, "Create", "Sizes", null, e.ToString(), Serilog.Events.LogEventLevel.Error);
+                    logs.Add(_auditlogServices.CreateLog(user!, "Create Size", "Sizes", null, e.ToString(), Serilog.Events.LogEventLevel.Error));
+                    await _auditlogServices.LogActionAsync(logs);
                     return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView()
                     {
                         Success = false,
