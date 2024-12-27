@@ -1,3 +1,4 @@
+using AdminApi.DTOs.AuditLog;
 using AdminApi.DTOs.NameTag;
 using AdminApi.DTOs.Product;
 using AdminApi.DTOs.ProductColor;
@@ -9,6 +10,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Serilog.Events;
 using Shared.Data;
 using Shared.Models;
 
@@ -149,7 +151,8 @@ namespace AdminApi.Controllers
         [HttpPost("create-product")]
         public async Task<IActionResult> CreateProduct([FromBody] CreateProductDto model)
         {
-            var logs = new List<(User actor, string action, string affectedTable, string objId)>();
+            // var logs = new List<(User actor, string action, string affectedTable, string objId)>();
+            var logs = new List<AuditLogDto>();
             var user = await _userServices.GetCurrentUserAsync();
             if (!ModelState.IsValid)
             {
@@ -246,15 +249,7 @@ namespace AdminApi.Controllers
                     await AssignSizesToColorAsync(productColor, variant.ProductColorSize, user!, logs);
                 }
                 await transaction.CommitAsync();
-                foreach (var log in logs)
-                {
-                    await _auditlogServices.LogActionAsync(
-                        log.actor,
-                        log.action,
-                        log.affectedTable,
-                        log.objId
-                    );
-                }
+                await _auditlogServices.LogActionAsync(logs);
                 return StatusCode(StatusCodes.Status200OK, new ResponseView<Product>
                 {
                     Success = true,
@@ -265,7 +260,8 @@ namespace AdminApi.Controllers
             }
             catch (Exception e)
             {
-                await _auditlogServices.LogActionAsync(user!, "Create", "Products", null, e.ToString(), Serilog.Events.LogEventLevel.Error);
+                logs.Add(_auditlogServices.CreateLog(user!, "Create Product", "Products", null, e.ToString(), LogEventLevel.Error));
+                await _auditlogServices.LogActionAsync(logs);
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView()
                 {
                     Success = false,
@@ -281,6 +277,7 @@ namespace AdminApi.Controllers
         [HttpPost("change-product-status/{id}")]
         public async Task<IActionResult> ChangeProductStatus(int id)
         {
+            var logs = new List<AuditLogDto>();
             var user = await _userServices.GetCurrentUserAsync();
             if (!await ValidateProductAsync(id))
             {
@@ -299,7 +296,8 @@ namespace AdminApi.Controllers
                 var transaction = await _context.Database.BeginTransactionAsync();
                 await _productServices.ChangeProductStatus(id);
                 await transaction.CommitAsync();
-                await _auditlogServices.LogActionAsync(user!, "Change status", "Product", id.ToString(), null, Serilog.Events.LogEventLevel.Information);
+                logs.Add(_auditlogServices.CreateLog(user!, "Change product status", "Products", id.ToString()));
+                await _auditlogServices.LogActionAsync(logs);
                 var response = new ResponseView()
                 {
                     Success = true,
@@ -309,7 +307,8 @@ namespace AdminApi.Controllers
             }
             catch (Exception e)
             {
-                await _auditlogServices.LogActionAsync(user!, "Change status", "Product", null, e.ToString(), Serilog.Events.LogEventLevel.Error);
+                logs.Add(_auditlogServices.CreateLog(user!, "Change status", "Product", null, e.ToString(), LogEventLevel.Error));
+                await _auditlogServices.LogActionAsync(logs);
                 return StatusCode(StatusCodes.Status404NotFound, new ResponseView()
                 {
                     Success = false,
@@ -325,7 +324,7 @@ namespace AdminApi.Controllers
         [HttpPost("update-product")]
         public async Task<IActionResult> UpdateBaseInfoProduct(ProductDto model)
         {
-            var logs = new List<(User actor, string action, string affectedTable, string objId)>();
+            var logs = new List<AuditLogDto>();
             var user = await _userServices.GetCurrentUserAsync();
 
             if (!ModelState.IsValid)
@@ -364,15 +363,10 @@ namespace AdminApi.Controllers
                 product.ProductName = model.ProductName;
                 product.Description = model.ProductDescription;
 
-                // Commit transaction
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
-
-                // Ghi logs
-                foreach (var log in logs)
-                {
-                    await _auditlogServices.LogActionAsync(log.actor, log.action, log.affectedTable, log.objId);
-                }
+                logs.Add(_auditlogServices.CreateLog(user!, "Update base product info", "Products", product.ProductId.ToString()));
+                await _auditlogServices.LogActionAsync(logs);
 
                 return Ok(new ResponseView<Product>
                 {
@@ -383,6 +377,8 @@ namespace AdminApi.Controllers
             }
             catch (Exception ex)
             {
+                logs.Add(_auditlogServices.CreateLog(user!, "Update base product info", "Products", product.ProductId.ToString(), ex.ToString(), LogEventLevel.Error));
+                await _auditlogServices.LogActionAsync(logs);
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView
                 {
                     Success = false,
@@ -400,6 +396,7 @@ namespace AdminApi.Controllers
         public async Task<IActionResult> UpdateImageForVariant(int variantId, List<string> base64Images)
         {
             var user = await _userServices.GetCurrentUserAsync();
+            var logs = new List<AuditLogDto>();
             var variant = await _context.ProductColors.FirstOrDefaultAsync(pc => pc.ProductColorId == variantId);
             if (variant == null)
             {
@@ -420,7 +417,8 @@ namespace AdminApi.Controllers
                 variant.ImagePath = newImagePath;
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
-                await _auditlogServices.LogActionAsync(user!, "Update", "ProductColors", variant.ProductColorId.ToString(), null);
+                logs.Add(_auditlogServices.CreateLog(user!, "Update", "ProductColors", variant.ProductColorId.ToString()));
+                await _auditlogServices.LogActionAsync(logs);
                 return Ok(new ResponseView
                 {
                     Success = true,
@@ -429,7 +427,8 @@ namespace AdminApi.Controllers
             }
             catch (Exception ex)
             {
-                await _auditlogServices.LogActionAsync(user!, "Update", "ProductColors", variant.ProductColorId.ToString(), ex.Message.ToString(), Serilog.Events.LogEventLevel.Error);
+                logs.Add(_auditlogServices.CreateLog(user!, "Update", "ProductColors", variant.ProductColorId.ToString(), ex.Message.ToString(), LogEventLevel.Error));
+                await _auditlogServices.LogActionAsync(logs);
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView
                 {
                     Success = false,
@@ -447,6 +446,7 @@ namespace AdminApi.Controllers
         [HttpPost("update-product-name-tag")]
         public async Task<IActionResult> UpdateProductNameTags(int? productId, List<NameTagDto> model)
         {
+            var logs = new List<AuditLogDto>();
             var user = await _userServices.GetCurrentUserAsync();
             if (productId == null || !await ValidateProductAsync(productId))
             {
@@ -498,7 +498,8 @@ namespace AdminApi.Controllers
                 {
                     var newNameTag = new ProductNameTag { ProductId = (int)productId, NameTagId = tagId };
                     _context.ProductNameTags.Add(newNameTag);
-                    await _auditlogServices.LogActionAsync(user!, "Create", "ProductNameTags", newNameTag.Id.ToString());
+                    logs.Add(_auditlogServices.CreateLog(user!, "Add new product name tag", "ProductNameTags", newNameTag.Id.ToString()));
+                    await _auditlogServices.LogActionAsync(logs);
                 }
 
                 // Xoá NameTags không còn
@@ -508,7 +509,9 @@ namespace AdminApi.Controllers
                     if (tagToRemove != null)
                     {
                         _context.ProductNameTags.Remove(tagToRemove);
-                        await _auditlogServices.LogActionAsync(user!, "Delete", "ProductNameTags", tagToRemove.Id.ToString());
+                        logs.Add(_auditlogServices.CreateLog(user!, "Remove product name tag", "ProductNameTags", tagToRemove.Id.ToString()));
+
+                        await _auditlogServices.LogActionAsync(logs);
                     }
                 }
                 return StatusCode(StatusCodes.Status200OK, new ResponseView()
@@ -519,7 +522,8 @@ namespace AdminApi.Controllers
             }
             catch (Exception ex)
             {
-                await _auditlogServices.LogActionAsync(user!, "Delete", "ProductNameTags", null, ex.Message, Serilog.Events.LogEventLevel.Error);
+                logs.Add(_auditlogServices.CreateLog(user!, "Delete", "ProductNameTags", null, ex.Message, LogEventLevel.Error));
+                await _auditlogServices.LogActionAsync(logs);
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResponseView
                 {
                     Success = false,
@@ -532,6 +536,7 @@ namespace AdminApi.Controllers
                 });
             }
         }
+
         #region Private Helper Method
         private Task<bool> ValidateProductAsync(int? productId)
         {
@@ -581,33 +586,34 @@ namespace AdminApi.Controllers
 
             return existingSizes.Count == sizeIds.Count();
         }
-        private async Task<Product> CreateProductAsync(CreateProductDto model, User user, List<(User actor, string action, string affectedTable, string objId)> logs)
+        private async Task<Product> CreateProductAsync(CreateProductDto model, User user, List<AuditLogDto> logs)
         {
             var product = await _productServices.CreateProductAsync(model, user, model.BrandId);
-            logs.Add((user, "Create", "Product", product.ProductId.ToString()));
+            logs.Add(_auditlogServices.CreateLog(user, "Create Product", "Products", product.ProductId.ToString()));
             return product;
         }
-        private async Task AssignNameTagsToProductAsync(Product product, ICollection<int> nameTagIds, List<(User actor, string action, string affectedTable, string objId)> logs, User user)
+        private async Task AssignNameTagsToProductAsync(Product product, ICollection<int> nameTagIds, List<AuditLogDto> logs, User user)
         {
             foreach (var tagId in nameTagIds)
             {
                 var productNameTag = await _productServices.CreateProductNameTagAsync(product, tagId);
-                logs.Add((user, "Create", "ProductNameTags", productNameTag.Id.ToString()));
+                logs.Add(_auditlogServices.CreateLog(user, "Create Product Tag", "ProductNameTags", productNameTag.Id.ToString()));
+
             }
         }
-        private async Task<ProductColor> CreateProductColorAsync(Product product, CreateProductColorDto variant, User user, List<(User actor, string action, string affectedTable, string objId)> logs)
+        private async Task<ProductColor> CreateProductColorAsync(Product product, CreateProductColorDto variant, User user, List<AuditLogDto> logs)
         {
             var imagesPath = await UploadImagesAsync(variant.images);
             var productColor = await _productServices.CreateProductColorAsync(product, variant.ColorId, variant.Price, imagesPath);
-            logs.Add((user, "Create", "ProductColors", productColor.ProductColorId.ToString()));
+            logs.Add(_auditlogServices.CreateLog(user, "Create Color", "Colors", productColor.ProductColorId.ToString()));
             return productColor;
         }
-        private async Task AssignSizesToColorAsync(ProductColor productColor, List<CreateProductColorSizeDto> sizes, User user, List<(User actor, string action, string affectedTable, string objId)> logs)
+        private async Task AssignSizesToColorAsync(ProductColor productColor, List<CreateProductColorSizeDto> sizes, User user, List<AuditLogDto> logs)
         {
             foreach (var size in sizes)
             {
                 var productColorSize = await _productServices.CreateProductColorSizeAsync(productColor, size.SizeId, size.Quantity);
-                logs.Add((user, "Create", "ProductColorSizes", productColorSize.ProductColorSizeId.ToString()));
+                logs.Add(_auditlogServices.CreateLog(user, "Create Product Color Size", "ProductColorSizes", productColorSize.ProductColorSizeId.ToString()));
             }
         }
         private async Task<string> UploadImagesAsync(IEnumerable<string> images)
@@ -620,7 +626,6 @@ namespace AdminApi.Controllers
             }
             return imagesPath.TrimEnd(';');
         }
-
         // private async Task UpdateProductColors(Product existingProduct, List<ProductColorDto> productColors)
         // {
         //     if (productColors == null) return;
