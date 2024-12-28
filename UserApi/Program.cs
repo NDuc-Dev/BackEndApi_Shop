@@ -1,5 +1,6 @@
 
 using System.Text;
+using AdminApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,8 @@ using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 using Shared.Data;
 using Shared.Models;
+using UserApi.Interfaces;
+using UserApi.Services;
 
 namespace UserApi
 {
@@ -86,6 +89,10 @@ namespace UserApi
             {
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
             });
+
+            builder.Services.AddScoped<UserServices>();
+            builder.Services.AddScoped<IJwtServices, JwtServices>();
+            builder.Services.AddScoped<IEmailServices, EmailServices>();
 
             builder.Services.AddIdentityCore<User>(options =>
             {
