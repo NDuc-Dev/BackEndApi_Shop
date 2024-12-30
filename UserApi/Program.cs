@@ -90,9 +90,12 @@ namespace UserApi
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
             });
 
+            builder.Services.AddAutoMapper(typeof(MappingProfiles));
+
             builder.Services.AddScoped<UserServices>();
             builder.Services.AddScoped<IJwtServices, JwtServices>();
             builder.Services.AddScoped<IEmailServices, EmailServices>();
+            builder.Services.AddScoped<IBrandServices, BrandServices>();
 
             builder.Services.AddIdentityCore<User>(options =>
             {
